@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Задания – TaskTrail</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/project-tasks.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="app-container">
+
+    <header class="header">
+        <div class="header-left">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="TaskTrail" class="logo">
+            <span class="site-name">TaskTrail</span>
+        </div>
+        <div class="header-right" onclick="window.location='/profile'">
+            <div class="user-profile"><i class="fas fa-user"></i> <span>Профиль</span></div>
+        </div>
+    </header>
+
+    <div class="main-content">
+            <!-- Боковое меню -->
+		<nav class="sidebar">
+			<ul class="nav-links">
+				<li class="nav-item">
+					<a href="/">
+						<i class="fas fa-home"></i>
+						<span>Главная</span>
+					</a>
+				</li>
+				<li class="nav-item">
+					<a href="/projects">
+						<i class="fas fa-project-diagram"></i>
+						<span>Проекты</span>
+					</a>
+				</li>
+				<li class="nav-item active">
+					<a href="/tasks">
+						<i class="fas fa-tasks"></i>
+						<span>Задачи</span>
+					</a>
+				</li>
+			</ul>
+		</nav>
+
+    <main class="project-content content">
+
+        <h1>Мои задания</h1>
+
+        <section class="tasks-category" data-status="active">
+            <div class="category-header">
+                <h2>Активные</h2>
+                <span class="tasks-count">0 задач</span>
+            </div>
+            <div class="tasks-list"></div>
+        </section>
+
+        <section class="tasks-category" data-status="planned">
+            <div class="category-header">
+                <h2>Запланированные</h2>
+                <span class="tasks-count">0 задач</span>
+            </div>
+            <div class="tasks-list"></div>
+        </section>
+
+        <section class="tasks-category" data-status="paused">
+            <div class="category-header">
+                <h2>Замороженные</h2>
+                <span class="tasks-count">0 задач</span>
+            </div>
+            <div class="tasks-list"></div>
+        </section>
+
+        <section class="tasks-category" data-status="completed">
+            <div class="category-header">
+                <h2>Выполненные</h2>
+                <span class="tasks-count">0 задач</span>
+            </div>
+            <div class="tasks-list"></div>
+        </section>
+
+        <section class="tasks-category" data-status="cancelled">
+            <div class="category-header">
+                <h2>Отменённые</h2>
+                <span class="tasks-count">0 задач</span>
+            </div>
+            <div class="tasks-list"></div>
+        </section>
+
+    </main>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/tasks.js') }}"></script>
+
+</body>
+</html>

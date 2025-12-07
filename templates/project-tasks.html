@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Разработка TaskTrail - TaskTrail</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/project-tasks.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+
+        <!-- Хэдер (как на index.html) -->
+        <header class="header">
+            <div class="header-left">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="TaskTrail" class="logo">
+                <span class="site-name">TaskTrail</span>
+            </div>
+            <div class="header-right" onclick="window.location='/profile'">
+                <div class="user-profile">
+                    <i class="fas fa-user"></i>
+                    <span>Профиль</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Боковое меню (как на index.html) -->
+            <nav class="sidebar">
+                <ul class="nav-links">
+                    <li class="nav-item">
+                        <a href="/">
+                            <i class="fas fa-home"></i>
+                            <span>Главная</span>
+                        </a>
+                    </li>
+                    <li class="nav-item active">
+                        <a href="/projects">
+                            <i class="fas fa-project-diagram"></i>
+                            <span>Проекты</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/tasks">
+                            <i class="fas fa-tasks"></i>
+                            <span>Задачи</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+        <!-- Основной контент -->
+        <main class="project-content content">
+            <!-- Карточка проекта -->
+            <section class="project-header">
+				<div class="project-cover-large">
+					<div class="cover-image">
+					</div>
+				</div>
+				<div class="project-info-large">
+					<h1></h1>
+					<p class="project-description"></p>
+				</div>
+			</section>
+			
+			<!-- Кнопка добавления задачи (видна только создателю) -->
+			<div class="project-actions" style="margin: 15px 0;">
+				<button id="btn-add-task" class="btn" style="display:none;">Добавить задачу</button>
+			</div>
+
+
+
+			<section class="tasks-category" data-status="active">
+				<div class="category-header"><h2>Активные задачи</h2></div>
+				<div class="tasks-list"></div>
+			</section>
+
+			<section class="tasks-category" data-status="planned">
+				<div class="category-header"><h2>Запланированные задачи</h2></div>
+				<div class="tasks-list"></div>
+			</section>
+
+			<section class="tasks-category" data-status="paused">
+				<div class="category-header"><h2>Замороженные задачи</h2></div>
+				<div class="tasks-list"></div>
+			</section>
+
+			<section class="tasks-category" data-status="completed">
+				<div class="category-header"><h2>Выполненные задачи</h2></div>
+				<div class="tasks-list"></div>
+			</section>
+
+			<section class="tasks-category" data-status="cancelled">
+				<div class="category-header"><h2>Отменённые задачи</h2></div>
+				<div class="tasks-list"></div>
+			</section>
+			
+			<!-- Модалка: создать задачу -->
+		<div id="modal-add-task" class="modal" style="display:none;">
+			<div class="modal-content">
+				<h3>Создать задачу</h3>
+				<label>Название</label>
+				<input type="text" id="new-task-name" />
+				<label>Описание</label>
+				<textarea id="new-task-desc"></textarea>
+				<label>Статус</label>
+				<select id="new-task-status">
+					<option value="planned">Запланирована</option>
+					<option value="active">Активна</option>
+					<option value="paused">Заморожена</option>
+					<option value="completed">Выполнена</option>
+					<option value="cancelled">Отменена</option>
+				</select>
+				
+				<label>Дата начала</label>
+				<input type="datetime-local" id="new-task-start" />
+
+				<label>Дата окончания</label>
+				<input type="datetime-local" id="new-task-end" />
+
+				<div style="margin-top:10px;">
+					<button id="create-task-submit" class="btn">Создать</button>
+					<button id="create-task-cancel" class="btn btn-secondary">Отмена</button>
+				</div>
+			</div>
+		</div>
+		
+		<!-- Модалка: назначить пользователя -->
+		<div id="modal-assign-user" class="modal" style="display:none;">
+			<div class="modal-content">
+				<h3>Назначить пользователя на задачу</h3>
+				<label>User ID</label>
+				<input type="number" id="assign-user-id" placeholder="ID пользователя" />
+				<div style="margin-top:10px;">
+					<button id="assign-user-submit" class="btn">Назначить</button>
+					<button id="assign-user-cancel" class="btn btn-secondary">Отмена</button>
+				</div>
+			</div>
+		</div>
+
+        </main>
+    </div>
+
+    <!-- Футер -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Сервис управления проектами</p>
+            </div>
+            <div class="footer-support">
+                <h4>Техническая поддержка</h4>
+                <p>tasktrail@gmail.com</p>
+                <p></p>
+            </div>
+        </div>
+    </footer>
+	
+	<script src="{{ url_for('static', filename='js/project-tasks.js') }}"></script>
+</body>
+</html>
