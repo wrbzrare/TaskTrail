@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>TaskTrail - Управление проектами</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/projects.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/project-tasks.css') }}">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .horizontal-section {
+            margin-bottom: 2.5rem;
+        }
+
+        .horizontal-header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:12px;
+        }
+
+        .carousel-wrapper {
+            position: relative;
+            background: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .h-scroll {
+            display:flex;
+            gap: 1rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 6px;
+        }
+
+        .h-scroll::-webkit-scrollbar { height: 8px; }
+        .h-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 8px; }
+
+        .project-card {
+            min-width: 260px;
+            max-width: 320px;
+            flex: 0 0 auto;
+        }
+
+        .task-horizontal {
+            min-width: 300px;
+            max-width: 360px;
+            flex: 0 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .task-horizontal .task-main {
+            margin-bottom: 8px;
+        }
+
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(52,152,219,0.9);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#fff;
+            border:none;
+            cursor:pointer;
+            z-index: 20;
+        }
+
+        .carousel-nav.left { left: 10px; }
+        .carousel-nav.right { right: 10px; }
+
+        .carousel-nav:hover { background: rgba(52,152,219,1); }
+		
+		.task-footer {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-top: 12px;
+		font-size: 13px;
+		color: #555;
+		}
+
+		.task-project-link {
+			color: #3498db;
+			text-decoration: none;
+		}
+
+		.task-project-link:hover {
+			text-decoration: underline;
+		}
+
+		.task-dates span {
+			display: block;
+		}
+
+        .empty-placeholder {
+            padding: 30px;
+            text-align: center;
+            color: #777;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .project-card { min-width: 220px; }
+            .task-horizontal { min-width: 260px; }
+            .carousel-nav { display:none; } /* свайп достаточно на мобильных */
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+
+    <!-- Хэдер -->
+    <header class="header">
+        <div class="header-left">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="TaskTrail" class="logo">
+            <span class="site-name">TaskTrail</span>
+        </div>
+        <div class="header-right" onclick="window.location='/profile'">
+            <div class="user-profile">
+                <i class="fas fa-user"></i>
+                <span>Профиль</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <nav class="sidebar">
+            <ul class="nav-links">
+                <li class="nav-item active">
+                    <a href="/">
+                        <i class="fas fa-home"></i>
+                        <span>Главная</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/projects">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>Проекты</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/tasks">
+                        <i class="fas fa-tasks"></i>
+                        <span>Задачи</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="content">
+            <section class="horizontal-section projects-main-section">
+                <div class="horizontal-header">
+                    <h2>Проекты</h2>
+                    <div class="header-right-controls">
+                        <a href="{{ url_for('projects_page') }}" class="filter-link">Все проекты →</a>
+                    </div>
+                </div>
+
+                <div class="carousel-wrapper">
+                    <button class="carousel-nav left" id="projects-prev"><i class="fas fa-chevron-left"></i></button>
+                    <div class="h-scroll" id="projects-scroll">
+                    </div>
+                    <button class="carousel-nav right" id="projects-next"><i class="fas fa-chevron-right"></i></button>
+
+                    <div id="projects-empty" class="empty-placeholder" style="display:none;">
+                        Нет проектов для отображения.
+                    </div>
+                </div>
+            </section>
+
+            <section class="horizontal-section tasks-main-section">
+                <div class="horizontal-header">
+                    <h2>Мои задачи</h2>
+                    <div class="header-right-controls">
+                        <a href="{{ url_for('tasks_page') }}" class="filter-link">Все задачи →</a>
+                    </div>
+                </div>
+
+                <div class="carousel-wrapper">
+                    <button class="carousel-nav left" id="tasks-prev"><i class="fas fa-chevron-left"></i></button>
+                    <div class="h-scroll" id="tasks-scroll">
+                    </div>
+                    <button class="carousel-nav right" id="tasks-next"><i class="fas fa-chevron-right"></i></button>
+
+                    <div id="tasks-empty" class="empty-placeholder" style="display:none;">
+                        У вас нет активных задач.
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Сервис управления проектами</p>
+            </div>
+            <div class="footer-support">
+                <h4>Техническая поддержка</h4>
+                <p>tasktrail@gmail.com</p>
+                <p></p>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создать проект - TaskTrail</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/projects.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/create_project.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+
+        <header class="header">
+			<div class="header-left">
+				<img src="{{ url_for('static', filename='img/logo.png') }}" alt="TaskTrail" class="logo">
+				<span class="site-name">TaskTrail</span>
+			</div>
+			<div class="header-right" onclick="window.location='/profile'">
+				<div class="user-profile">
+					<i class="fas fa-user"></i>
+					<span>Профиль</span>
+				</div>
+			</div>
+		</header>
+
+        <div class="main-content">
+            <nav class="sidebar">
+                <ul class="nav-links">
+                    <li class="nav-item">
+                        <a href="/">
+                            <i class="fas fa-home"></i>
+                            <span>Главная</span>
+                        </a>
+                    </li>
+                    <li class="nav-item active">
+                        <a href="/projects">
+                            <i class="fas fa-project-diagram"></i>
+                            <span>Проекты</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/tasks">
+                            <i class="fas fa-tasks"></i>
+                            <span>Задачи</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <main class="content">
+                <div class="page-header" style="align-items:center; gap:16px;">
+                    <h1>Создать проект</h1>
+                    <a href="/projects" class="create-back-link" title="К списку проектов">
+                        <i class="fas fa-arrow-left"></i> Назад к проектам
+                    </a>
+                </div>
+
+                <div class="card project-card-form">
+                    <form id="create-project-form" class="project-form" enctype="multipart/form-data" novalidate>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <label for="name" class="form-label">Название проекта <span class="required">*</span></label>
+                                <input type="text" id="name" name="name" class="form-input" required placeholder="Например: Запуск сайта">
+
+                                <label for="description" class="form-label" style="margin-top:14px;">Описание проекта <span class="required">*</span></label>
+                                <textarea id="description" name="description" class="form-textarea" rows="6" required placeholder="Коротко опишите цель проекта"></textarea>
+
+                                <label for="status" class="form-label" style="margin-top:14px;">Статус проекта <span class="required">*</span></label>
+                                <select id="status" name="status" class="form-select" required>
+                                    <option value="planned">Запланирован</option>
+                                    <option value="active" selected>Активный</option>
+                                    <option value="paused">Заморожен</option>
+                                    <option value="completed">Выполнен</option>
+                                    <option value="cancelled">Отменён</option>
+                                </select>
+                            </div>
+
+                            <div class="form-col form-col-side">
+                                <label class="form-label">Обложка проекта</label>
+
+                                <div class="cover-uploader">
+                                    <div id="cover-preview" class="cover-preview">
+                                        <img src="{{ url_for('static', filename='img/project_covers/default_project.jpg') }}" alt="Preview" id="cover-img">
+                                    </div>
+
+                                    <div class="cover-controls">
+                                        <label for="cover" class="btn-ghost">
+                                            <i class="fas fa-upload"></i> Выбрать файл
+                                        </label>
+                                        <input type="file" id="cover" name="cover" accept="image/*" class="file-input">
+
+                                        <button type="button" id="remove-cover-btn" class="btn-link" style="display:none;">
+                                            <i class="fas fa-trash-alt"></i> Убрать
+                                        </button>
+
+                                        <p class="hint">Рекомендуемый размер: 1200×400, формат PNG/JPEG. Если обложка не загружена будет использована стандартная.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <div id="message" class="form-message" aria-live="polite"></div>
+                            <button type="submit" id="submit-btn" class="btn-primary">
+                                <i class="fas fa-plus"></i> Создать проект
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/create_project.js') }}"></script>
+	
+	<footer class="footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Сервис управления проектами</p>
+            </div>
+            <div class="footer-support">
+                <h4>Техническая поддержка</h4>
+                <p>tasktrail@gmail.com</p>
+                <p></p>
+            </div>
+        </div>
+    </footer>
+	
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль - TaskTrail</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="TaskTrail" class="logo">
+            <span class="site-name">TaskTrail</span>
+        </div>
+        <div class="header-right" onclick="window.location='/profile'">
+            <div class="user-profile">
+                <i class="fas fa-user"></i>
+                <span>Профиль</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="main-content">
+            <nav class="sidebar">
+                <ul class="nav-links">
+                    <li class="nav-item">
+                        <a href="/">
+                            <i class="fas fa-home"></i>
+                            <span>Главная</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/projects">
+                            <i class="fas fa-project-diagram"></i>
+                            <span>Проекты</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/tasks">
+                            <i class="fas fa-tasks"></i>
+                            <span>Задачи</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+        <main class="main-content">
+            <div class="profile-container">
+				<div class="profile-header">
+					<h1>Профиль пользователя</h1>
+				</div>
+
+				<div class="profile-card">
+					<div class="profile-photo-section">
+						<div class="photo-wrapper">
+							<img src="https://via.placeholder.com/200x200/4361ee/ffffff?text=Фото" 
+								 alt="Фото профиля" 
+								 class="profile-photo"
+								 id="profile-photo">
+							<button class="change-photo-btn" id="change-photo-btn">
+								<i class="fas fa-camera"></i>
+								Сменить фото
+							</button>
+							<input type="file" 
+								   id="photo-upload" 
+								   accept="image/*" 
+								   style="display: none;">
+						</div>
+					</div>
+
+					<div class="profile-info-section">
+						<div class="info-item">
+							<span class="info-label">ID:</span>
+							<span class="info-value" id="user-id"></span>
+						</div>
+						
+						<div class="info-item">
+							<span class="info-label">ФИО:</span>
+							<span class="info-value" id="user-fio"></span>
+						</div>
+						
+						<div class="info-item">
+							<span class="info-label">Описание:</span>
+							<p class="info-description" id="user-description"></p>
+						</div>
+						
+						<div class="info-item">
+							<span class="info-label">Электронная почта:</span>
+							<span class="info-value" id="user-email"></span>
+						</div>
+						
+						<div class="stats-section">
+							<div class="stat-card">
+								<div class="stat-icon">
+									<i class="fas fa-tasks"></i>
+								</div>
+								<div class="stat-content">
+									<div class="stat-number" id="active-tasks"></div>
+									<div class="stat-label">Активных задач</div>
+								</div>
+							</div>
+							
+							<div class="stat-card">
+								<div class="stat-icon">
+									<i class="fas fa-check-circle"></i>
+								</div>
+								<div class="stat-content">
+									<div class="stat-number" id="completed-tasks"></div>
+									<div class="stat-label">Завершенных задач</div>
+								</div>
+							</div>
+						</div>
+						<div class="logout-panel-section" id="logout-panel" style="display: none;">
+							<button class="logout-btn" id="logout-btn" onclick="window.location='/logout'">
+								<i class="fas fa-shield-alt"></i>
+								Выйти
+							</button>
+						</div>
+						
+						<div class="admin-panel-section" id="admin-panel" style="display: none;">
+							<button class="admin-btn" id="admin-btn" onclick="window.location='/admin'">
+								<i class="fas fa-shield-alt"></i>
+								Панель администратора
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Сервис управления проектами</p>
+            </div>
+            <div class="footer-support">
+                <h4>Техническая поддержка</h4>
+                <p>tasktrail@gmail.com</p>
+                <p></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+</body>
+</html>
