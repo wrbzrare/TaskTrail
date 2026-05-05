@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const changePhotoBtn = document.getElementById('change-photo-btn');
     const photoUpload = document.getElementById('photo-upload');
 
-    // ---------- Загрузка данных ----------
     try {
         const res = await fetch(`/api/users/me`);
         const data = await res.json();
@@ -39,7 +38,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.error("Ошибка загрузки профиля:", err);
     }
 	
-	// ---------- Кнопка смены фото ----------
 	changePhotoBtn.addEventListener('click', function() {
 		photoUpload.click();
 	});

@@ -11,6 +11,9 @@ import time
 import os
 import re
 
+from openai import OpenAI
+from openai import APIError, APITimeoutError
+
 from functools import wraps
 
 from config import Config
@@ -23,6 +26,11 @@ app.secret_key = Config.SECRET_KEY
 api = Api(app)
 
 db = Database()
+
+client = OpenAI(
+    base_url=Config.NVIDIA_BASE_URL,
+    api_key=Config.NVIDIA_API_KEY
+)
 
 # ---------- Декоратор для авторизации ----------
 def login_required(f):
@@ -103,21 +111,25 @@ class LoginAPI(Resource):
             return {"success": False, "message": "Введите логин/email и пароль"}, 400
 
         EMAIL_REGEX = r"^[\w\.-]+@[\w\.-]+\.\w+$"
-
         is_email = re.match(EMAIL_REGEX, email) is not None
 
-        if is_email:
-            db.cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-        else:
-            db.cursor.execute("SELECT * FROM users WHERE login = ?", (email,))
+        cursor = User.get_cursor()
+        try:
+            if is_email:
+                cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+            else:
+                cursor.execute("SELECT * FROM users WHERE login = ?", (email,))
 
-        row = db.cursor.fetchone()
+            row = cursor.fetchone()
 
-        if not row:
-            return {"success": False, "message": "Пользователь не найден"}, 404
+            if not row:
+                return {"success": False, "message": "Пользователь не найден"}, 404
 
-        columns = [desc[0] for desc in db.cursor.description]
-        user = dict(zip(columns, row))
+            columns = [desc[0] for desc in cursor.description]
+            user = dict(zip(columns, row))
+
+        finally:
+            cursor.close()
 
         # Проверяем хэш пароля
         if not check_password_hash(user["password_hash"], password):
@@ -209,25 +221,26 @@ class RequestRecoveryAPI(Resource):
         email = data.get('email')
         if not email:
             return {"success": False, "message": "Email не указан"}, 400
-
-        db.cursor.execute("SELECT id, email FROM users WHERE email = ?", (email,))
-        user = db.cursor.fetchone()
-        if not user:
-            return {"success": False, "message": "Пользователь с таким email не найден"}, 404
-
-        user_id = user[0]
-
-        db.cursor.execute("DELETE FROM account_recovery WHERE user_id = ?", (user_id,))
-        db.connection.commit()
-        code = random.randint(100000, 999999)
-        db.cursor.execute(
-            "INSERT INTO account_recovery (user_id, code) VALUES (?, ?)",
-            (user_id, code)
-        )
-        db.connection.commit()
-
+        cursor = User.get_cursor()
+        try:
+            cursor.execute("SELECT id, email FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
+            if not user:
+                return {"success": False, "message": "Пользователь с таким email не найден"}, 404
+            user_id = user[0]
+            cursor.execute(
+                "DELETE FROM account_recovery WHERE user_id = ?",
+                (user_id,)
+            )
+            code = random.randint(100000, 999999)
+            cursor.execute(
+                "INSERT INTO account_recovery (user_id, code) VALUES (?, ?)",
+                (user_id, code)
+            )
+            db.connection.commit()
+        finally:
+            cursor.close()
         send_email(email, code)
-
         return {"success": True, "message": "Код отправлен на email"}, 200
 
 # ---------- API для проверки кода ----------
@@ -240,29 +253,32 @@ class VerifyRecoveryAPI(Resource):
         if not email or not code:
             return {"success": False, "message": "Не указан email или код"}, 400
 
-        db.cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
-        user = db.cursor.fetchone()
-        if not user:
-            return {"success": False, "message": "Пользователь не найден"}, 404
-        user_id = user[0]
-
-        # Получаем код восстановления
-        db.cursor.execute(
-            "SELECT code, created_at FROM account_recovery WHERE user_id = ?",
-            (user_id,)
-        )
-        row = db.cursor.fetchone()
-        if not row:
-            return {"success": False, "message": "Код не найден, запросите новый"}, 404
+        cursor = User.get_cursor()
+        try:
+            cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
+            if not user:
+                return {"success": False, "message": "Пользователь не найден"}, 404
+            user_id = user[0]
+            cursor.execute(
+                "SELECT code, created_at FROM account_recovery WHERE user_id = ?",
+                (user_id,)
+            )
+            row = cursor.fetchone()
+            if not row:
+                return {"success": False, "message": "Код не найден, запросите новый"}, 404
+        finally:
+            cursor.close()
 
         db_code, created_at_str = row
         created_at = datetime.fromisoformat(created_at_str)
         created_at = created_at.replace(tzinfo=timezone.utc)
         now = datetime.now(timezone.utc)
-        print("created_at:", repr(created_at_str))
-        if datetime.now(timezone.utc) > created_at + timedelta(minutes=10):
-            return {"success": False, "message": "Код истёк, запросите новый"}, 400
 
+        print("created_at:", repr(created_at_str))
+
+        if now > created_at + timedelta(minutes=10):
+            return {"success": False, "message": "Код истёк, запросите новый"}, 400
         if str(db_code) != str(code):
             return {"success": False, "message": "Неверный код"}, 400
 
@@ -275,45 +291,53 @@ class ResetPasswordAPI(Resource):
         email = data.get('email')
         code = data.get('code')
         new_password = data.get('new_password')
-
         if not email or not code or not new_password:
             return {"success": False, "message": "Не заполнены все поля"}, 400
-
-        db.cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
-        user = db.cursor.fetchone()
-        if not user:
-            return {"success": False, "message": "Пользователь не найден"}, 404
-        user_id = user[0]
-
-        db.cursor.execute(
-            "SELECT code, created_at FROM account_recovery WHERE user_id = ?",
-            (user_id,)
-        )
-        row = db.cursor.fetchone()
-        if not row:
-            return {"success": False, "message": "Код не найден"}, 404
+        cursor = User.get_cursor()
+        try:
+            cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
+            if not user:
+                return {"success": False, "message": "Пользователь не найден"}, 404
+            user_id = user[0]
+            cursor.execute(
+                "SELECT code, created_at FROM account_recovery WHERE user_id = ?",
+                (user_id,)
+            )
+            row = cursor.fetchone()
+            if not row:
+                return {"success": False, "message": "Код не найден"}, 404
+        finally:
+            cursor.close()
 
         db_code, created_at_str = row
         created_at = datetime.fromisoformat(created_at_str)
         created_at = created_at.replace(tzinfo=timezone.utc)
         now = datetime.now(timezone.utc)
-        print("created_at:", repr(created_at_str))
-        if datetime.now(timezone.utc) > created_at + timedelta(minutes=10):
-            return {"success": False, "message": "Код истёк, запросите новый"}, 400
 
+        print("created_at:", repr(created_at_str))
+
+        if now > created_at + timedelta(minutes=10):
+            return {"success": False, "message": "Код истёк, запросите новый"}, 400
         if str(db_code) != str(code):
             return {"success": False, "message": "Неверный код"}, 400
-
         hashed_password = generate_password_hash(new_password)
-        db.cursor.execute(
-            "UPDATE users SET password_hash = ? WHERE id = ?",
-            (hashed_password, user_id)
-        )
-        db.connection.commit()
+        cursor = User.get_cursor()
+        try:
+            cursor.execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (hashed_password, user_id)
+            )
 
-        # Удаляем использованный код
-        db.cursor.execute("DELETE FROM account_recovery WHERE user_id = ?", (user_id,))
-        db.connection.commit()
+            cursor.execute(
+                "DELETE FROM account_recovery WHERE user_id = ?",
+                (user_id,)
+            )
+
+            db.connection.commit()
+
+        finally:
+            cursor.close()
 
         return {"success": True, "message": "Пароль успешно изменён"}, 200
 
@@ -415,6 +439,50 @@ class ProjectCreateTaskAPI(Resource):
             "end_at": t.end_at
         }}, 201
 
+# ---------- API для написания задачи с помощью ИИ ----------
+class TaskGenerateDescriptionAPI(Resource):
+    def post(self):
+        user_id = session.get("user_id")
+        if not user_id:
+            return {"success": False, "message": "Не авторизован"}, 401
+
+        data = request.get_json() or {}
+        name = data.get("name", "").strip()
+        description = data.get("description", "").strip()
+
+        if not name:
+            return {"success": False, "message": "Название задачи обязательно"}, 400
+
+        user_prompt = Config.USER_CREATEDESCRIPTION.format(
+            name=name,
+            description=description if description else "(без дополнительного описания)"
+        )
+
+        try:
+            response = client.chat.completions.create(
+                model=Config.AI_MODEL,
+                messages=[
+                    {"role": "system", "content": Config.SYSTEM_CREATEDESCRIPTION},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.7,
+                max_tokens=1800,
+                top_p=0.95
+            )
+
+            ai_text = response.choices[0].message.content.strip()
+
+            return {"success": True, "detailed_description": ai_text}, 200
+
+        except APITimeoutError:
+            return {"success": False, "message": "Время ожидания ответа от ИИ истекло. Попробуйте позже."}, 504
+        except APIError as e:
+            print(f"[NVIDIA AI Error] {e}")
+            return {"success": False, "message": f"Ошибка сервера: {e.message}"}, 502
+        except Exception as e:
+            print(f"[AI Unexpected Error] {e}")
+            return {"success": False, "message": "Не удалось связаться с сервером"}, 500
+
 # ---------- API для смены глобального статуса задачи ----------
 class TaskUpdateStatusAPI(Resource):
     def post(self, task_id):
@@ -435,11 +503,16 @@ class TaskUpdateStatusAPI(Resource):
 
         payload = request.get_json() or {}
         new_status = payload.get("status")
+
         if new_status not in ('planned','active','paused','completed','cancelled','archived'):
             return {"success": False, "message": "Неподдерживаемый статус"}, 400
 
-        Task.db.cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (new_status, task_id))
-        Task.db.connection.commit()
+        cursor = Task.get_cursor()
+        try:
+            cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (new_status, task_id))
+            Task.db.commit()
+        finally:
+            cursor.close()
 
         return {"success": True, "message": "Статус задачи обновлён", "task_id": task_id, "status": new_status}, 200
 
@@ -463,23 +536,94 @@ class TaskAssignUserAPI(Resource):
 
         payload = request.get_json() or {}
         assign_user_id = payload.get("user_id")
+
         if not assign_user_id:
             return {"success": False, "message": "user_id обязателен"}, 400
 
-        Task.db.cursor.execute("SELECT id FROM users WHERE id = ?", (assign_user_id,))
-        if not Task.db.cursor.fetchone():
-            return {"success": False, "message": "Пользователь не найден"}, 404
-
+        cursor = Task.get_cursor()
         try:
-            Task.db.cursor.execute("""
-                INSERT INTO distributed_tasks (user_id, task_id, status)
-                VALUES (?, ?, ?)
-            """, (assign_user_id, task_id, 'planned'))
-            Task.db.connection.commit()
-        except Exception as e:
-            return {"success": False, "message": "Пользователь уже назначен или ошибка: " + str(e)}, 400
+            cursor.execute("SELECT id FROM users WHERE id = ?", (assign_user_id,))
+            if not cursor.fetchone():
+                return {"success": False, "message": "Пользователь не найден"}, 404
+
+            try:
+                cursor.execute("""
+                    INSERT INTO distributed_tasks (user_id, task_id, status)
+                    VALUES (?, ?, ?)
+                """, (assign_user_id, task_id, 'planned'))
+
+                Task.db.commit()
+
+            except Exception as e:
+                return {
+                    "success": False,
+                    "message": "Пользователь уже назначен или ошибка: " + str(e)
+                }, 400
+
+        finally:
+            cursor.close()
 
         return {"success": True, "message": "Пользователь назначен"}, 201
+
+# ---------- API: Статус выполнения задачи по пользователям ----------
+class TaskAssigneesStatusAPI(Resource):
+    def get(self, task_id):
+        user_id = session.get("user_id")
+        if not user_id:
+            return {"success": False, "message": "Не авторизован"}, 401
+
+        # Проверяем, существует ли задача
+        task = Task.get_by_id(task_id)
+        if not task:
+            return {"success": False, "message": "Задача не найдена"}, 404
+
+        cursor = Task.get_cursor()
+        try:
+            cursor.execute("""
+                SELECT 
+                    u.id,
+                    u.surname,
+                    u.name,
+                    u.patronymic,
+                    u.photo,
+                    dt.status as assignee_status,
+                    dt.completed_at
+                FROM distributed_tasks dt
+                JOIN users u ON dt.user_id = u.id
+                WHERE dt.task_id = ?
+                ORDER BY u.surname, u.name
+            """, (task_id,))
+            
+            rows = cursor.fetchall()
+            columns = [desc[0] for desc in cursor.description]
+            
+            assignees = []
+            for row in rows:
+                data = dict(zip(columns, row))
+                full_name = " ".join(filter(None, [
+                    data.get("surname"),
+                    data.get("name"),
+                    data.get("patronymic")
+                ])).strip() or "Без имени"
+
+                assignees.append({
+                    "id": data["id"],
+                    "full_name": full_name,
+                    "photo": data.get("photo") or "static/img/photos/default_photo.jpg",
+                    "status": data["assignee_status"],
+                    "completed_at": data.get("completed_at")
+                })
+
+            return {
+                "success": True,
+                "task_id": task_id,
+                "task_name": task.name,
+                "assignees": assignees
+            }, 200
+
+        finally:
+            cursor.close()
+
 
 # ---------- API для получения задач проекта ----------
 class ProjectTasksAPI(Resource):
@@ -553,18 +697,20 @@ class AllUserTasksAPI(Resource):
 class CompleteTaskAPI(Resource):
     def post(self, task_id):
         user_id = session.get("user_id")
-
-        query = """
-            UPDATE distributed_tasks 
-            SET status='completed', completed_at=CURRENT_TIMESTAMP
-            WHERE user_id = ? AND task_id = ?
-        """
-        Task.db.cursor.execute(query, (user_id, task_id))
-        Task.db.connection.commit()
-
+        cursor = Task.get_cursor()
+        try:
+            query = """
+                UPDATE distributed_tasks 
+                SET status='completed', completed_at=CURRENT_TIMESTAMP
+                WHERE user_id = ? AND task_id = ?
+            """
+            cursor.execute(query, (user_id, task_id))
+            Task.db.commit()
+        finally:
+            cursor.close()
         return {"success": True}, 200
 
-# ---------- API для создангия проекта ----------
+# ---------- API для создания проекта ----------
 class CreateProjectAPI(Resource):
     def post(self):
         user_id = session.get("user_id")
@@ -605,9 +751,6 @@ class CreateProjectAPI(Resource):
 # ---------- API для профиля пользователя ----------
 class UserProfileAPI(Resource):
     def get(self):
-        """
-        Получение данных профиля пользователя.
-        """
         user_id = session.get('user_id')
         if not user_id:
             return {"success": False, "message": "Не авторизован"}, 401
@@ -616,14 +759,19 @@ class UserProfileAPI(Resource):
         if not user:
             return {"success": False, "message": "Пользователь не найден"}, 404
 
-        Task.db.cursor.execute("""
-            SELECT 
-                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_count,
-                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_count
-            FROM distributed_tasks
-            WHERE user_id = ?
-        """, (user_id,))
-        row = Task.db.cursor.fetchone()
+        cursor = Task.get_cursor()
+        try:
+            cursor.execute("""
+                SELECT 
+                    SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_count,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_count
+                FROM distributed_tasks
+                WHERE user_id = ?
+            """, (user_id,))
+            row = cursor.fetchone()
+        finally:
+            cursor.close()
+
         active_count = row[0] or 0
         completed_count = row[1] or 0
 
@@ -642,9 +790,6 @@ class UserProfileAPI(Resource):
         return {"success": True, "user": data}, 200
 
     def post(self):
-        """
-        Изменение фотографии пользователя.
-        """
         user_id = session.get('user_id')
         if not user_id:
             return {"success": False, "message": "Не авторизован"}, 401
@@ -672,6 +817,35 @@ class UserProfileAPI(Resource):
         else:
             return {"success": False, "message": "Неверный формат файла"}, 400
 
+# ---------- API для поиска пользователей ----------
+class UsersSearchAPI(Resource):
+    def get(self):
+        user_id = session.get("user_id")
+        if not user_id:
+            return {"success": False, "message": "Не авторизован"}, 401
+
+        q = request.args.get("q", "").strip()
+        # Используем уже существующий метод из модели User
+        users = User.search_users(q=q, limit=200)
+
+        result = []
+        for u in users:
+            full_name = " ".join(filter(None, [
+                u.get("surname"),
+                u.get("name"),
+                u.get("patronymic")
+            ])).strip() or "Без имени"
+
+            photo = u.get("photo") or "static/img/photos/default_photo.jpg"
+
+            result.append({
+                "id": u["id"],
+                "full_name": full_name,
+                "photo": photo
+            })
+
+        return {"success": True, "users": result}, 200
+
 # ---------- API для получения списка пользователей ----------
 class AdminUsersAPI(Resource):
     def get(self):
@@ -679,7 +853,6 @@ class AdminUsersAPI(Resource):
         if not user_id:
             return {"success": False, "message": "Не авторизован"}, 401
 
-        # проверим роль
         role = User.get_role(user_id)
         if role not in ("moderator", "admin"):
             return {"success": False, "message": "Доступ запрещён"}, 403
@@ -687,7 +860,6 @@ class AdminUsersAPI(Resource):
         q = request.args.get("q", None)
         users = User.search_users(q=q, limit=500)
 
-        # форматируем вывод: id, full_name, email, phone, status, created_at
         out = []
         for u in users:
             full_name = " ".join(filter(None, [u.get("surname"), u.get("name"), u.get("patronymic")]))
@@ -733,6 +905,7 @@ class AdminUserCreateAPI(Resource):
         if not user_id:
             return {"success": False, "message": "Не авторизован"}, 401
 
+        # Проверка роли
         role = User.get_role(user_id)
         if role not in ("moderator", "admin"):
             return {"success": False, "message": "Доступ запрещён"}, 403
@@ -753,16 +926,14 @@ class AdminUserCreateAPI(Resource):
             return {"success": False, "message": "Пользователь с таким email уже существует"}, 409
 
         login = data["login"].strip()
-        email = data["email"].strip()
         surname = data["surname"].strip()
         name = data["name"].strip()
         patronymic = data.get("patronymic", "").strip() or None
-        description = data["description"].strip() or None
+        description = data.get("description", "").strip() or None
         phone = data.get("phone", "").strip() or None
         password = data["password"]
 
         password_hash = generate_password_hash(password)
-
 
         new_user = User(
             login=login,
@@ -774,13 +945,59 @@ class AdminUserCreateAPI(Resource):
             email=email,
             phone_number=phone
         )
+
         new_user.save()
 
+        new_id = new_user.id
 
-        User.db.connection.commit()
-        new_id = User.db.cursor.lastrowid
+        return {
+            "success": True, 
+            "message": "Пользователь создан", 
+            "user_id": new_id
+        }, 201
 
-        return {"success": True, "message": "Пользователь создан", "user_id": new_id}, 201
+# ---------- API генерации SQL команд по запросу ----------
+class NL2SQLAPI(Resource):
+    def post(self):
+        user_id = session.get("user_id")
+        if not user_id:
+            return {"success": False, "message": "Не авторизован"}, 401
+
+        data = request.get_json(silent=True) or {}
+        user_query = data.get("query", "").strip()
+
+        if not user_query:
+            return {"success": False, "message": "Введите описание запроса"}, 400
+
+        user_prompt = Config.USER_CREATEQUERY.format(
+            user_query=user_query
+        )
+
+        try:
+            response = client.chat.completions.create(
+                model=Config.AI_MODEL,
+                messages=[
+                    {"role": "system", "content": Config.SYSTEM_CREATEQUERY},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.1,
+                max_tokens=500,
+                top_p=0.9
+            )
+
+            ai_text = response.choices[0].message.content.strip()
+
+            return {"success": True, "generated-query": ai_text}, 200
+
+        except APITimeoutError:
+            return {"success": False, "message": "Время ожидания ответа от ИИ истекло. Попробуйте позже."}, 504
+        except APIError as e:
+            print(f"[NVIDIA AI Error] {e}")
+            return {"success": False, "message": f"Ошибка сервера: {e.message}"}, 502
+        except Exception as e:
+            print(f"[AI Unexpected Error] {e}")
+            return {"success": False, "message": "Не удалось связаться с сервером"}, 500
+
 
 # ---------- API для ввода и использования SQL команд ----------
 class SQLConsoleAPI(Resource):
@@ -803,16 +1020,17 @@ class SQLConsoleAPI(Resource):
         if ";" in query and not query.endswith(";"):
             return {"success": False, "message": "Множественные SQL запросы запрещены"}, 400
 
-        db = User.db  # используем основную БД (как модель User)
+        db = User.db
 
+        cursor = db.get_cursor()
         try:
             start = time.time()
 
-            db.cursor.execute(query)
+            cursor.execute(query)
 
             if query.lower().startswith("select"):
-                rows = db.cursor.fetchall()
-                columns = [desc[0] for desc in db.cursor.description]
+                rows = cursor.fetchall()
+                columns = [desc[0] for desc in cursor.description]
                 execution_time = round(time.time() - start, 5)
 
                 return {
@@ -825,20 +1043,21 @@ class SQLConsoleAPI(Resource):
                 }, 200
 
             else:
-
-                db.connection.commit()
+                db.commit()
                 execution_time = round(time.time() - start, 5)
 
                 return {
                     "success": True,
                     "type": "modify",
-                    "rows_count": db.cursor.rowcount,
+                    "rows_count": cursor.rowcount,
                     "execution_time": execution_time
                 }, 200
 
         except sqlite3.Error as e:
             return {"success": False, "message": str(e)}, 400
 
+        finally:
+            cursor.close()
 
 # ---------- Регистрируем API ----------
 api.add_resource(LoginAPI, '/api/login')
@@ -853,13 +1072,17 @@ api.add_resource(CompleteTaskAPI, "/api/tasks/<int:task_id>/complete")
 api.add_resource(UserRoleAPI, "/api/user-role")
 api.add_resource(CreateProjectAPI, "/api/projects/create")
 api.add_resource(ProjectCreateTaskAPI, "/api/projects/<int:project_id>/tasks/create")
+api.add_resource(TaskGenerateDescriptionAPI, "/api/tasks/generate-description")
 api.add_resource(TaskUpdateStatusAPI, "/api/tasks/<int:task_id>/update_status")
+api.add_resource(TaskAssigneesStatusAPI, '/api/tasks/<int:task_id>/assignees')
 api.add_resource(TaskAssignUserAPI, "/api/tasks/<int:task_id>/assign")
 api.add_resource(UserProfileAPI, "/api/users/me")
+api.add_resource(UsersSearchAPI, "/api/users/search")
 api.add_resource(AdminUsersAPI, "/api/admin/users")
 api.add_resource(AdminUserStatusAPI, "/api/admin/users/<int:user_id>/status")
 api.add_resource(AdminUserCreateAPI, "/api/admin/users/create")
-api.add_resource(SQLConsoleAPI, "/api/admin/sql")
+api.add_resource(NL2SQLAPI, "/api/admin/sql/generate")
+api.add_resource(SQLConsoleAPI, "/api/admin/sql/execute")
 
 
 if __name__ == '__main__':

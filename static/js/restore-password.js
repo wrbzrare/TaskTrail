@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let timer = 60;
     let countdown;
 
-    // ---------- Шаг 1: Отправка email ----------
     emailForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const email = document.getElementById('email').value.trim();
@@ -51,7 +50,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ---------- Шаг 2: Проверка кода ----------
     codeForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const email = hiddenEmail.value;
@@ -75,7 +73,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ---------- Шаг 3: Сброс пароля ----------
     passwordForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const email = hiddenEmail.value;
@@ -101,7 +98,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ---------- Таймер ----------
     resendCode.addEventListener('click', async function(e) {
         e.preventDefault();
         if (timer > 0) return;

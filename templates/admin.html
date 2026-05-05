@@ -11,7 +11,6 @@
 <body>
     <div class="app-container">
 
-        <!-- Хэдер -->
         <header class="header">
             <div class="header-left">
                 <img src="{{ url_for('static', filename='img/logo.png') }}" alt="TaskTrail" class="logo">
@@ -26,7 +25,6 @@
         </header>
 
         <div class="main-content">
-            <!-- Боковое меню -->
             <nav class="sidebar">
                 <ul class="nav-links">
                     <li class="nav-item">
@@ -57,7 +55,6 @@
                     <p class="admin-subtitle">Управление пользователями и системой</p>
                 </div>
 
-                <!-- Навигация по разделам админки -->
                 <div class="admin-nav">
                     <button class="admin-nav-btn active" data-tab="users-tab">
                         <i class="fas fa-users"></i> Пользователи
@@ -70,7 +67,6 @@
                     </button>
                 </div>
 
-                <!-- Вкладка: Управление пользователями -->
                 <div class="admin-tab active" id="users-tab">
                     <div class="tab-header">
                         <h2>Управление пользователями</h2>
@@ -104,7 +100,6 @@
                     
                 </div>
 
-                <!-- Вкладка: Добавление пользователя -->
                 <div class="admin-tab" id="add-user-tab">
                     <div class="tab-header">
                         <h2>Добавление нового пользователя</h2>
@@ -164,7 +159,6 @@
                     </form>
                 </div>
 
-                <!-- Вкладка: SQL Консоль -->
                 <div class="admin-tab" id="sql-tab">
                     <div class="tab-header">
                         <h2>SQL Консоль</h2>
@@ -176,11 +170,16 @@
 
                     <div class="sql-console">
                         <div class="sql-input-container">
-                            <textarea id="sql-query" 
-                                      placeholder="Введите SQL запрос... 
-Пример: SELECT * FROM users WHERE status = 'active'"
-                                      class="sql-input"></textarea>
-                            <div class="sql-controls">
+							<div style="position: relative;">
+								<textarea id="sql-query" 
+										  placeholder="Введите SQL запрос... 
+	Пример: SELECT * FROM users WHERE status = 'active'"
+										  class="sql-input"></textarea>
+								<button id="btn-ai-generate" class="btn-ai">
+								<i class="fas fa-sparkles"></i>Сгенерировать запрос</button>
+							</div>
+                            
+							<div class="sql-controls">
                                 <button class="sql-btn run-btn" id="run-query">
                                     <i class="fas fa-play"></i> Выполнить
                                 </button>

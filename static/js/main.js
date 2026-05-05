@@ -1,4 +1,3 @@
-// -------------------- ПРОЕКТЫ --------------------
 async function loadProjects() {
     const container = document.getElementById('projects-scroll');
     const emptyPlaceholder = document.getElementById('projects-empty');
@@ -9,11 +8,9 @@ async function loadProjects() {
 
         if (!data.success || !data.projects) throw new Error('Неверный формат API');
 
-        // Получаем активные проекты
         let activeProjects = data.projects.active || [];
         let otherProjects = [];
 
-        // Если активных меньше 3, добираем остальные
         if (activeProjects.length < 3) {
             const statuses = ['planned','paused','completed','cancelled','archived'];
             for (const status of statuses) {
@@ -56,7 +53,6 @@ async function loadProjects() {
     }
 }
 
-// -------------------- ЗАДАЧИ --------------------
 async function loadTasks() {
     const container = document.getElementById('tasks-scroll');
     const emptyPlaceholder = document.getElementById('tasks-empty');
@@ -127,7 +123,6 @@ async function loadTasks() {
     }
 }
 
-// Отметка задачи как выполненной
 async function markCompleted(id, card, button) {
     try {
         const res = await fetch(`/api/tasks/${id}/complete`, { method: 'POST' });
@@ -144,7 +139,6 @@ async function markCompleted(id, card, button) {
     }
 }
 
-// Всплывающие уведомления
 function showNotification(message) {
     const n = document.createElement('div');
     n.className = 'notification';
@@ -162,20 +156,14 @@ function showNotification(message) {
     setTimeout(() => n.remove(), 2500);
 }
 
-
-
-
-// -------------------- ИНИЦИАЛИЗАЦИЯ --------------------
 document.addEventListener('DOMContentLoaded', () => {
     loadProjects();
     loadTasks();
 
-    // Карусель: проекты
     const scrollProjects = document.getElementById('projects-scroll');
     document.getElementById('projects-prev').addEventListener('click', () => scrollProjects.scrollBy({ left: -300, behavior: 'smooth' }));
     document.getElementById('projects-next').addEventListener('click', () => scrollProjects.scrollBy({ left: 300, behavior: 'smooth' }));
 
-    // Карусель: задачи
     const scrollTasks = document.getElementById('tasks-scroll');
     document.getElementById('tasks-prev').addEventListener('click', () => scrollTasks.scrollBy({ left: -300, behavior: 'smooth' }));
     document.getElementById('tasks-next').addEventListener('click', () => scrollTasks.scrollBy({ left: 300, behavior: 'smooth' }));

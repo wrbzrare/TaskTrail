@@ -1,9 +1,6 @@
 from db import Database
 
 class BaseModel:
-    """
-    Базовая модель, предоставляющая общие методы для работы с БД.
-    """
     table_name = None
     db = Database()
 
@@ -12,21 +9,30 @@ class BaseModel:
             setattr(self, key, value)
 
     @classmethod
+    def get_cursor(cls):
+        return cls.db.get_cursor()
+
+    @classmethod
     def get_by_id(cls, record_id):
+        cursor = cls.get_cursor()
         query = f"SELECT * FROM {cls.table_name} WHERE id = ?"
-        cls.db.cursor.execute(query, (record_id,))
-        row = cls.db.cursor.fetchone()
+        cursor.execute(query, (record_id,))
+        row = cursor.fetchone()
         if row:
-            columns = [desc[0] for desc in cls.db.cursor.description]
+            columns = [desc[0] for desc in cursor.description]
+            cursor.close()
             return cls(**dict(zip(columns, row)))
+        cursor.close()
         return None
 
     @classmethod
     def get_all(cls):
+        cursor = cls.get_cursor()
         query = f"SELECT * FROM {cls.table_name}"
-        cls.db.cursor.execute(query)
-        rows = cls.db.cursor.fetchall()
-        columns = [desc[0] for desc in cls.db.cursor.description]
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        cursor.close()
         return [cls(**dict(zip(columns, row))) for row in rows]
 
     def save(self):
@@ -34,6 +40,8 @@ class BaseModel:
         data = self.__dict__.copy()
         
         is_update = hasattr(self, 'id') and self.id is not None
+
+        cursor = self.get_cursor()
         
         if is_update:
             object_id = data.pop('id')
@@ -66,27 +74,38 @@ class BaseModel:
                 
                 query = f"INSERT INTO {self.table_name} ({columns}) VALUES ({placeholders})"
         
-        self.db.cursor.execute(query, values_to_update)
-        self.db.connection.commit()
-        
-        if not is_update:
-            self.id = self.db.cursor.lastrowid
+        try:
+            cursor.execute(query, values_to_update)
+            self.db.commit()
+            if not is_update:
+                self.id = cursor.lastrowid
+        finally:
+            cursor.close()
 
     @classmethod
     def find_one(cls, field, value):
-        query = f"SELECT * FROM {cls.table_name} WHERE {field} = ? LIMIT 1"
-        cls.db.cursor.execute(query, (value,))
-        row = cls.db.cursor.fetchone()
+        cursor = cls.get_cursor()
+        try:
+            query = f"SELECT * FROM {cls.table_name} WHERE {field} = ? LIMIT 1"
+            cursor.execute(query, (value,))
+            row = cursor.fetchone()
 
-        if not row:
-            return None
+            if not row:
+                return None
 
-        columns = [col[0] for col in cls.db.cursor.description]
-        data = dict(zip(columns, row))
-        return cls(**data)
+            columns = [desc[0] for desc in cursor.description]
+            data = dict(zip(columns, row))
+                
+            return cls(**data)
+        finally:
+            cursor.close()
 
     def delete(self):
         if getattr(self, "id", None):
-            query = f"DELETE FROM {self.table_name} WHERE id = ?"
-            self.db.cursor.execute(query, (self.id,))
-            self.db.connection.commit()
+            cursor = self.get_cursor()
+            try:
+                query = f"DELETE FROM {self.table_name} WHERE id = ?"
+                cursor.execute(query, (self.id,))
+                self.db.commit()
+            finally:
+                cursor.close()

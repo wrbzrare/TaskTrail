@@ -11,7 +11,6 @@
 <body>
     <div class="app-container">
 
-        <!-- Хэдер (как на index.html) -->
         <header class="header">
             <div class="header-left">
                 <img src="{{ url_for('static', filename='img/logo.png') }}" alt="TaskTrail" class="logo">
@@ -26,7 +25,6 @@
         </header>
 
         <div class="main-content">
-            <!-- Боковое меню (как на index.html) -->
             <nav class="sidebar">
                 <ul class="nav-links">
                     <li class="nav-item">
@@ -50,9 +48,7 @@
                 </ul>
             </nav>
 
-        <!-- Основной контент -->
         <main class="project-content content">
-            <!-- Карточка проекта -->
             <section class="project-header">
 				<div class="project-cover-large">
 					<div class="cover-image">
@@ -64,7 +60,6 @@
 				</div>
 			</section>
 			
-			<!-- Кнопка добавления задачи (видна только создателю) -->
 			<div class="project-actions" style="margin: 15px 0;">
 				<button id="btn-add-task" class="btn" style="display:none;">Добавить задачу</button>
 			</div>
@@ -96,53 +91,90 @@
 				<div class="tasks-list"></div>
 			</section>
 			
-			<!-- Модалка: создать задачу -->
-		<div id="modal-add-task" class="modal" style="display:none;">
-			<div class="modal-content">
-				<h3>Создать задачу</h3>
-				<label>Название</label>
-				<input type="text" id="new-task-name" />
-				<label>Описание</label>
-				<textarea id="new-task-desc"></textarea>
-				<label>Статус</label>
-				<select id="new-task-status">
-					<option value="planned">Запланирована</option>
-					<option value="active">Активна</option>
-					<option value="paused">Заморожена</option>
-					<option value="completed">Выполнена</option>
-					<option value="cancelled">Отменена</option>
-				</select>
-				
-				<label>Дата начала</label>
-				<input type="datetime-local" id="new-task-start" />
+			<div id="modal-add-task" class="modal" style="display:none;">
+				<div class="modal-content">
+					<h3>Создать новую задачу</h3>
+					
+					<label>Название задачи *</label>
+					<input type="text" id="new-task-name" placeholder="Например: Разработать API для авторизации" />
 
-				<label>Дата окончания</label>
-				<input type="datetime-local" id="new-task-end" />
+					<label>Описание</label>
+					<div style="position: relative;">
+						<textarea id="new-task-desc" rows="8" placeholder="Краткое описание..."></textarea>
+						
+						<button id="btn-ai-generate" class="btn-ai" title="Расписать задачу подробнее с помощью ИИ">
+							<i class="fas fa-sparkles"></i> Расписать с ИИ
+						</button>
+					</div>
 
-				<div style="margin-top:10px;">
-					<button id="create-task-submit" class="btn">Создать</button>
-					<button id="create-task-cancel" class="btn btn-secondary">Отмена</button>
+					<label>Статус</label>
+					<select id="new-task-status">
+						<option value="planned">Запланирована</option>
+						<option value="active">Активна</option>
+						<option value="paused">Заморожена</option>
+						<option value="completed">Выполнена</option>
+						<option value="cancelled">Отменена</option>
+					</select>
+					
+					<div class="form-row">
+						<div>
+							<label>Дата начала</label>
+							<input type="datetime-local" id="new-task-start" />
+						</div>
+						<div>
+							<label>Дата окончания</label>
+							<input type="datetime-local" id="new-task-end" />
+						</div>
+					</div>
+
+					<div class="modal-actions">
+						<button id="create-task-submit" class="btn">Создать задачу</button>
+						<button id="create-task-cancel" class="btn btn-secondary">Отмена</button>
+					</div>
 				</div>
 			</div>
-		</div>
 		
-		<!-- Модалка: назначить пользователя -->
 		<div id="modal-assign-user" class="modal" style="display:none;">
-			<div class="modal-content">
+			<div class="modal-content assign-modal">
 				<h3>Назначить пользователя на задачу</h3>
-				<label>User ID</label>
-				<input type="number" id="assign-user-id" placeholder="ID пользователя" />
-				<div style="margin-top:10px;">
-					<button id="assign-user-submit" class="btn">Назначить</button>
+				
+				<div class="search-container">
+					<input type="text" id="assign-search-input" 
+						   placeholder="Поиск по ФИО..." autocomplete="off">
+					
+					<div id="assign-users-list" class="users-list"></div>
+				</div>
+
+				<div class="selected-user" id="selected-user-info" style="display:none;">
+					<img id="selected-photo" src="" alt="">
+					<div>
+						<strong id="selected-name"></strong><br>
+						<small>ID: <span id="selected-id"></span></small>
+					</div>
+				</div>
+
+				<div class="modal-actions">
+					<button id="assign-user-submit" class="btn" disabled>Назначить</button>
 					<button id="assign-user-cancel" class="btn btn-secondary">Отмена</button>
 				</div>
 			</div>
 		</div>
+		
+		<div id="modal-task-status" class="modal" style="display:none;">
+			<div class="modal-content" style="width:500px;">
+				<h3 id="status-task-title">Статус выполнения</h3>
 
+				<div id="task-status-list" style="margin-top:15px; max-height:400px; overflow-y:auto;">
+				</div>
+
+				<div class="modal-actions">
+					<button id="task-status-close" class="btn btn-secondary">Закрыть</button>
+				</div>
+			</div>
+		</div>
         </main>
     </div>
 
-    <!-- Футер -->
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-info">

@@ -4,9 +4,22 @@ from config import Config
 
 class Database:
     def __init__(self):
-        self.connection = sqlite3.connect(Config.DATABASE, check_same_thread=False)
-        self.cursor = self.connection.cursor()
+        self.connection = sqlite3.connect(
+            Config.DATABASE, 
+            check_same_thread=False, 
+            timeout=10              
+        )
+        self.cursor = self.connection.cursor() 
         self.create_tables()
+
+    def get_cursor(self):
+        return self.connection.cursor()
+
+    def commit(self):
+        self.connection.commit()
+
+    def close(self):
+        self.connection.close()
 
     def create_tables(self):
         self.cursor.execute("""

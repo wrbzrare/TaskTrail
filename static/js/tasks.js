@@ -2,7 +2,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await loadTasks();
 
-    // ---------- Загрузка всех задач пользователя ----------
     async function loadTasks() {
         try {
             const res = await fetch("/api/tasks/all");
@@ -19,7 +18,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    // ---------- Рендеринг задач ----------
     function renderTasks(grouped) {
         const categories = {};
 
@@ -44,7 +42,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    // ---------- Карточка задачи ----------
     function buildTaskCard(task) {
         const card = document.createElement("div");
 
@@ -90,7 +87,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return card;
     }
 
-    // ---------- Отметка задачи ----------
     async function markCompleted(id, card, button) {
         try {
             const res = await fetch(`/api/tasks/${id}/complete`, { method: "POST" });
@@ -107,7 +103,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    // ---------- Уведомления ----------
     function showNotification(message) {
         const n = document.createElement("div");
         n.className = "notification";

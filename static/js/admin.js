@@ -23,7 +23,6 @@ document.addEventListener("DOMContentLoaded", function(){
     let lastQuery = '';
     let debounceTimer = null;
 
-    // Загрузка списка пользователей
     async function loadUsers(q='') {
         try {
             const url = '/api/admin/users' + (q ? `?q=${encodeURIComponent(q)}` : '');
@@ -42,7 +41,6 @@ document.addEventListener("DOMContentLoaded", function(){
         }
     }
 
-    // Отрисовка таблицы
     function renderUsers(users) {
         if (!users.length) {
             usersTbody.innerHTML = `<tr><td colspan="7">Ничего не найдено</td></tr>`;
@@ -74,13 +72,11 @@ document.addEventListener("DOMContentLoaded", function(){
             `;
         }).join('');
 
-        // обработчики переключателей
         usersTbody.querySelectorAll('.deactivate-input').forEach(cb => {
             cb.addEventListener('change', onToggle);
         });
     }
 
-    // Переключение статуса
     async function onToggle(e) {
         const tr = e.target.closest("tr");
         const userId = tr.dataset.userId;
@@ -178,6 +174,7 @@ document.addEventListener("DOMContentLoaded", function(){
     const sqlResults = document.getElementById("sql-results");
     const rowsCountEl = document.getElementById("rows-count");
     const execTimeEl = document.getElementById("execution-time");
+	const btnAiGenerateSql = document.getElementById("btn-ai-generate");
 
     if (sqlInput && runQueryBtn && clearQueryBtn && sqlResults) {
 
@@ -201,7 +198,7 @@ document.addEventListener("DOMContentLoaded", function(){
             }
 
             try {
-                const res = await fetch("/api/admin/sql", {
+                const res = await fetch("/api/admin/sql/execute", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ query })
@@ -260,7 +257,49 @@ document.addEventListener("DOMContentLoaded", function(){
             html += "</tbody></table>";
             return html;
         }
+		
+		if (btnAiGenerateSql) {
+			btnAiGenerateSql.addEventListener("click", async () => {
+				const queryText = sqlInput.value.trim();
+
+				if (!queryText) {
+					showNotification("Сначала опишите, что нужно получить", "error");
+					return;
+				}
+
+				const originalText = btnAiGenerateSql.innerHTML;
+				btnAiGenerateSql.disabled = true;
+				btnAiGenerateSql.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Генерируем...`;
+
+				try {
+					const res = await fetch("/api/admin/sql/generate", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							query: queryText
+						})
+					});
+
+					const data = await res.json();
+
+					if (data.success) {
+						sqlInput.value = data["generated-query"];
+						showNotification("SQL успешно сгенерирован ✨");
+					} else {
+						showNotification(data.message || "Ошибка генерации", "error");
+					}
+
+				} catch (err) {
+					console.error(err);
+					showNotification("Ошибка связи с сервером ИИ", "error");
+				} finally {
+					btnAiGenerateSql.disabled = false;
+					btnAiGenerateSql.innerHTML = originalText;
+				}
+			});
+		}
     }
+	
 	
 	function showNotification(message, type = 'success') {
 		const notification = document.createElement('div');
@@ -303,7 +342,7 @@ document.addEventListener("DOMContentLoaded", function(){
 		to { transform: translateX(100%); opacity: 0; }
 	}
 	`;
-
+	
 document.head.appendChild(style);
 
 });
